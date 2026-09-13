@@ -1,75 +1,143 @@
-export default {
-  async fetch(request, env, ctx) {
-    const url = new URL(request.url);
+/* =========================================================
+   Sulan Peptide Worker
+   - /api/admin/data        GET   管理后台读取全部数据
+   - /api/admin/save-data   POST  管理后台保存数据
+   - /api/public/config     GET   落地页读取公开配置
+   - 其他                   静态资源兜底
+========================================================= */
 
-    // 1. 处理后端 API 路由 (匹配 /api/*)
-    if (url.pathname.startsWith('/api/')) {
-      return handleApiRequest(request, env);
-    }
-
-    // 2. 处理短链接跳转路由 (匹配 /go/*)
-    if (url.pathname.startsWith('/go/')) {
-      return handleGoRequest(request, env);
-    }
-
-    // 3. 核心修复：精准处理 /admin 路径
-    if (url.pathname.startsWith('/admin')) {
-      // 如果用户访问的是 /admin 或 /admin/，强制补全为 /admin/index.html
-      if (url.pathname === '/admin' || url.pathname === '/admin/') {
-        const adminIndexUrl = new URL('/admin/index.html', request.url);
-        return await env.ASSETS.fetch(new Request(adminIndexUrl, request));
-      }
-      
-      // 如果访问的是 /admin/ 目录下的其他静态资源（如 js, css, md 图像等）
-      return await env.ASSETS.fetch(request);
-    }
-
-    // 4. 其他所有普通请求（例如访问前端根目录首页），直接交给静态资源
-    return await env.ASSETS.fetch(request);
-  }
+const DEFAULT_DATA = {
+    stats: { page_views: 0, whatsapp_clicks: 0, form_submissions: 0 },
+    config: {
+        form_enabled: true,
+        routing_mode: 'single',
+        pixels: { meta: [], tiktok: [] }
+    },
+    events: [],
+    leads: [],
+    whatsapp: [],
+    pixels: { meta: [], tiktok: [] }
 };
 
-/**
- * 处理 /api/* 的后端请求示例
- */
-async function handleApiRequest(request, env) {
-  const url = new URL(request.url);
+const JSON_HEADERS = {
+    'Content-Type': 'application/json; charset=utf-8',
+    'Cache-Control': 'no-store'
+};
 
-  // 示例 API：从您绑定的 DATA_KV 中读取数据
-  if (url.pathname === '/api/get-data') {
-    try {
-      const kvData = await env.DATA_KV.get("example_key") || "暂无数据";
-      return new Response(JSON.stringify({ success: true, data: kvData }), {
-        headers: { "Content-Type": "application/json; charset=utf-8" }
-      });
-    } catch (err) {
-      return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500 });
-    }
-  }
-
-  // 默认 API 404 回应
-  return new Response(JSON.stringify({ error: "API 路由未找到" }), { 
-    status: 404,
-    headers: { "Content-Type": "application/json" }
-  });
+function jsonResponse(data, status = 200) {
+    return new Response(JSON.stringify(data), {
+        status,
+        headers: JSON_HEADERS
+    });
 }
 
-/**
- * 处理 /go/* 的重定向跳转示例
- */
-async function handleGoRequest(request, env) {
-  const url = new URL(request.url);
-  // 提取 /go/ 后面的后缀（例如 /go/home -> home）
-  const parts = url.pathname.split('/');
-  const key = parts[2]; 
+export default {
+    async fetch(request, env, ctx) {
+        const url = new URL(request.url);
 
-  if (key) {
-    // 从 KV 数据库中查找对应的重定向 URL
-    const targetUrl = await env.DATA_KV.get(`redirect:${key}`);
-    if (targetUrl) {
-      return Response.redirect(targetUrl, 302);
+        /* ---------- 1. 管理后台：读取全部数据 ---------- */
+        if (url.pathname === '/api/admin/data' && request.method === 'GET') {
+            try {
+                const raw = await env.DATA_KV.get('data');
+                if (!raw) {
+                    // KV 里还没有数据，初始化一份
+                    await env.DATA_KV.put('data', JSON.stringify(DEFAULT_DATA));
+                    return jsonResponse(DEFAULT_DATA);
+                }
+                return new Response(raw, { headers: JSON_HEADERS });
+            } catch (e) {
+                return jsonResponse({ error: e.message }, 500);
+            }
+        }
+
+        /* ---------- 2. 管理后台：保存全部数据 ---------- */
+        if (url.pathname === '/api/admin/save-data' && request.method === 'POST') {
+            try {
+                const body = await request.text();
+
+                // 校验 JSON
+                try {
+                    JSON.parse(body);
+                } catch {
+                    return jsonResponse({ error: 'Invalid JSON' }, 400);
+                }
+
+                await env.DATA_KV.put('data', body);
+                return jsonResponse({ ok: true });
+            } catch (e) {
+                return jsonResponse({ error: e.message }, 500);
+            }
+        }
+
+        /* ---------- 3. 落地页：读取公开配置 ---------- */
+        if (url.pathname === '/api/public/config' && request.method === 'GET') {
+            try {
+                const raw = await env.DATA_KV.get('data');
+                let data = {};
+                try {
+                    data = raw ? JSON.parse(raw) : {};
+                } catch {
+                    data = {};
+                }
+
+                const config = data.config || {};
+                const whatsapp = Array.isArray(data.whatsapp) ? data.whatsapp : [];
+                const pixels = data.pixels || { meta: [], tiktok: [] };
+
+                const publicConfig = {
+                    form_enabled: config.form_enabled !== false,
+                    routing_mode: config.routing_mode || 'single',
+
+                    // 只返回启用中的号码
+                    whatsapp: whatsapp
+                        .filter(x => x && x.active !== false && (x.number || x.phone))
+                        .map(x => ({
+                            id: x.id,
+                            label: x.label || '',
+                            number: x.number || x.phone,
+                            is_default: x.is_default === true
+                        })),
+
+                    // 只返回启用中的像素
+                    pixels: {
+                        meta: (pixels.meta || [])
+                            .filter(x => x && x.enabled !== false)
+                            .map(x => ({ id: x.id, events: x.events || [] })),
+                        tiktok: (pixels.tiktok || [])
+                            .filter(x => x && x.enabled !== false)
+                            .map(x => ({ id: x.id, events: x.events || [] }))
+                    }
+                };
+
+                return new Response(JSON.stringify(publicConfig), {
+                    headers: {
+                        ...JSON_HEADERS,
+                        'Access-Control-Allow-Origin': '*'
+                    }
+                });
+            } catch (e) {
+                return jsonResponse({ error: e.message }, 500);
+            }
+        }
+
+        /* ---------- 4. OPTIONS 预检（跨域时需要） ---------- */
+        if (request.method === 'OPTIONS') {
+            return new Response(null, {
+                status: 204,
+                headers: {
+                    'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+                    'Access-Control-Allow-Headers': 'Content-Type'
+                }
+            });
+        }
+
+        /* ---------- 5. 静态资源兜底 ---------- */
+        // 访问 /、/admin/、/assets/xxx 等都会走这里
+        if (env.ASSETS) {
+            return env.ASSETS.fetch(request);
+        }
+
+        return new Response('Not found', { status: 404 });
     }
-  }
-
-  return new Response("跳转链接未找到或已过期", { status: 404 });
-}
+};
