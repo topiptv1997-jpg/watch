@@ -5,6 +5,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Sulan Peptide — Campaign Center</title>
+  <link rel="icon" type="image/png" sizes="48x48" href="https://sulanpeptide.net//favicon-48x48.png">
   <style>
     :root {
       --green: #00583f;
@@ -574,7 +575,7 @@
       }
     }
 
-    /* ===== 登录遮罩样式 ===== */
+    /* 登录遮罩 - 覆盖整个页面 */
     #login-overlay {
       position: fixed;
       inset: 0;
@@ -683,24 +684,22 @@
 </head>
 
 <body>
-
-  <!-- 登录遮罩开始 -->
+  <!-- 登录遮罩 -->
   <div id="login-overlay">
     <div class="login-box">
       <div class="logo">SULAN PEPTIDE</div>
       <div class="sub">Campaign Center · 管理后台</div>
-      <form id="loginForm">
+      <form id="loginForm" autocomplete="off">
         <div class="field">
-          <label>密码 / Password</label>
-          <input type="password" id="loginPass" placeholder="请输入密码" autocomplete="current-password" required>
+          <label>登录密码</label>
+          <input type="password" id="loginPassword" placeholder="请输入管理密码" required autofocus>
         </div>
-        <button type="submit" class="login-btn" id="loginBtn">登录 / Sign in</button>
+        <button type="submit" class="login-btn" id="loginBtn">登 录</button>
         <div class="error-msg" id="loginError"></div>
       </form>
-      <div class="hint">默认密码：admin123</div>
+      <!-- <div class="hint">默认密码: admin123</div> -->
     </div>
   </div>
-  <!-- 登录遮罩结束 -->
 
   <div class="app">
     <aside class="side">
@@ -1088,114 +1087,6 @@
   <div class="toast" id="toast"></div>
 
   <script>
-    /* ========== 登录验证逻辑 ========== */
-    (function () {
-      const loginOverlay = document.getElementById('login-overlay');
-      const loginForm = document.getElementById('loginForm');
-      const loginPass = document.getElementById('loginPass');
-      const loginError = document.getElementById('loginError');
-
-      const ADMIN_PASS = 'admin123';
-
-      function checkLogin() {
-        if (sessionStorage.getItem('sulan_admin_logged_in') === 'true') {
-          loginOverlay.classList.add('hidden');
-          return true;
-        }
-        return false;
-      }
-
-      loginForm.addEventListener('submit', function (e) {
-        e.preventDefault();
-        const pass = loginPass.value;
-
-        if (pass === ADMIN_PASS) {
-          sessionStorage.setItem('sulan_admin_logged_in', 'true');
-          loginOverlay.classList.add('hidden');
-          loginError.textContent = '';
-          if (typeof load === 'function') load();
-        } else {
-          loginError.textContent = '密码错误 / Invalid password';
-          loginPass.value = '';
-          loginPass.focus();
-        }
-      });
-
-      document.getElementById('logout').addEventListener('click', function (e) {
-        e.preventDefault();
-        sessionStorage.removeItem('sulan_admin_logged_in');
-        location.reload();
-      });
-
-      if (!checkLogin()) {
-        setTimeout(() => loginPass.focus(), 100);
-      }
-
-      if (sessionStorage.getItem('sulan_admin_logged_in') === 'true') {
-        loginOverlay.classList.add('hidden');
-      }
-    })();
-
-    /* ========== 数据层：Worker + KV ========== */
-    const DATA_API = '/api/admin/data';
-    const SAVE_API = '/api/admin/save-data';
-
-    const DEFAULT_DATA = {
-      stats: { page_views: 0, whatsapp_clicks: 0, form_submissions: 0 },
-      config: { form_enabled: true, routing_mode: 'single', pixels: { meta: [], tiktok: [] } },
-      events: [],
-      leads: [],
-      whatsapp: [],
-      pixels: { meta: [], tiktok: [] }
-    };
-
-    let appData = JSON.parse(JSON.stringify(DEFAULT_DATA));
-
-    // 从 Worker KV 读取
-    async function loadDataFromFile() {
-      try {
-        const res = await fetch(DATA_API + '?t=' + Date.now(), {
-          cache: 'no-store',
-          credentials: 'same-origin'
-        });
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        const json = await res.json();
-        appData = {
-          stats: { ...DEFAULT_DATA.stats, ...(json.stats || {}) },
-          config: { ...DEFAULT_DATA.config, ...(json.config || {}) },
-          events: Array.isArray(json.events) ? json.events : [],
-          leads: Array.isArray(json.leads) ? json.leads : [],
-          whatsapp: Array.isArray(json.whatsapp) ? json.whatsapp : [],
-          pixels: {
-            meta: Array.isArray(json.pixels?.meta) ? json.pixels.meta : [],
-            tiktok: Array.isArray(json.pixels?.tiktok) ? json.pixels.tiktok : []
-          }
-        };
-        return appData;
-      } catch (e) {
-        console.warn('Worker KV 读取失败，使用默认数据:', e.message);
-        appData = JSON.parse(JSON.stringify(DEFAULT_DATA));
-        return appData;
-      }
-    }
-
-    // 写入 Worker KV
-    async function saveDataToFile() {
-      const res = await fetch(SAVE_API, {
-        method: 'POST',
-        credentials: 'same-origin',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(appData)
-      });
-      if (!res.ok) {
-        let msg = 'HTTP ' + res.status;
-        try { const j = await res.json(); msg = j.error || msg; } catch { }
-        throw new Error(msg);
-      }
-      return true;
-    }
-
-    /* ========== 原有逻辑 ========== */
     const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
     const state = { stats: {}, config: {}, events: [], leads: [], whatsapp: [], pixels: { meta: [], tiktok: [] } };
     const I18N = {
@@ -1216,6 +1107,13 @@
     function page(p) { $$(".page").forEach(x => x.classList.toggle("active", x.id === p)); $$(".nav button[data-page]").forEach(x => x.classList.toggle("active", x.dataset.page === p)); applyLang(); if (p === "events") loadEvents(); if (p === "leads") loadLeads(); if (p === "pixels") loadPixels(); if (p === "whatsapp") loadWa() }
     $$(".nav button[data-page]").forEach(b => b.onclick = () => page(b.dataset.page)); $$("[data-page-link]").forEach(b => b.onclick = () => page(b.dataset.pageLink));
 
+    async function api(path, opt = {}) {
+      const r = await fetch(path, { ...opt, cache: "no-store", credentials: "same-origin", headers: { "Accept": "application/json", ...(opt.headers || {}) } });
+      const text = await r.text(); let data = null; try { data = text ? JSON.parse(text) : null } catch { data = text }
+      if (!r.ok) { throw new Error(typeof data === "string" ? data : (data?.error || data?.message || `HTTP ${r.status}`)) }
+      return data;
+    }
+    function arr(x) { if (Array.isArray(x)) return x; return x?.items || x?.data || x?.events || x?.leads || x?.whatsapp || [] }
     function num(...xs) { for (const x of xs) { if (x !== undefined && x !== null && x !== "") return Number(x) || 0 } return 0 }
     function fmt(n) { return Number(n || 0).toLocaleString() }
     function time(s) { return s ? new Date(s).toLocaleString() : "—" }
@@ -1223,29 +1121,13 @@
     function toast(msg) { const x = $("#toast"); x.textContent = msg; x.classList.add("show"); setTimeout(() => x.classList.remove("show"), 2200) }
     function setError(msg) { $("#systemStatus").textContent = "● " + msg; $("#systemStatus").classList.add("err"); $("#workerState").textContent = "● Worker / API error" }
 
-    function syncStateFromAppData() {
-      state.stats = appData.stats || {};
-      state.config = appData.config || {};
-      state.events = appData.events || [];
-      state.leads = appData.leads || [];
-      state.whatsapp = appData.whatsapp || [];
-      state.pixels = appData.pixels || { meta: [], tiktok: [] };
-    }
-
     async function load() {
       try {
-        await loadDataFromFile();
-        syncStateFromAppData();
-        $("#systemStatus").textContent = lang === "zh" ? "● 系统正常运行" : "● System operational";
-        $("#systemStatus").classList.remove("err");
-        $("#workerState").textContent = lang === "zh" ? "● Worker 已连接" : "● Worker connected";
+        const [stats, config, events] = await Promise.all([api("/api/admin/stats"), api("/api/admin/config"), api("/api/admin/events")]);
+        state.stats = stats || {}; state.config = config || {}; state.events = arr(events);
+        $("#systemStatus").textContent = lang === "zh" ? "● 系统正常运行" : "● System operational"; $("#systemStatus").classList.remove("err"); $("#workerState").textContent = lang === "zh" ? "● Worker 已连接" : "● Worker connected";
         render(); loadWa(); loadPixels();
-      } catch (e) {
-        console.error(e);
-        setError(lang === "zh" ? "API 连接失败" : "API error");
-        syncStateFromAppData();
-        render(); loadWa(); loadPixels();
-      }
+      } catch (e) { console.error(e); setError(lang === "zh" ? "API 连接失败" : "API error") }
     }
     function render() {
       const s = state.stats || {}, c = state.config || {};
@@ -1279,78 +1161,22 @@
     function renderEvents() {
       $("#eventRows").innerHTML = state.events.slice(0, 500).map(x => `<tr><td>${esc(time(x.created_at || x.createdAt))}</td><td><span class="badge">${esc(x.type || x.event || "event")}</span></td><td>${esc(x.source || x.utm_source || "direct")}</td><td>${esc(x.campaign || x.utm_campaign || "—")}</td><td>${esc(x.adset || x.utm_adset || "—")}</td><td>${esc(x.number || x.phone || "—")}</td></tr>`).join("") || '<tr><td colspan="6" class="empty">No events yet.</td></tr>';
     }
-    async function loadEvents() {
-      try {
-        await loadDataFromFile();
-        syncStateFromAppData();
-        renderAnalytics(); renderEvents()
-      } catch (e) { toast(e.message) }
-    }
-
-    async function loadWa() {
-      try {
-        await loadDataFromFile();
-        syncStateFromAppData();
-        const list = state.whatsapp || [];
-        $("#waList").innerHTML = list.map(x => `<div class="pixel"><div><b>${esc(x.label || "WhatsApp")}</b><div class="id">${esc(x.number || x.phone || "")}</div><div class="muted">${x.is_default || x.isDefault ? "Default · " : ""}${x.active === false ? "Disabled" : "Active"}</div></div><div class="actions"><button class="btn secondary" onclick='editWa(${JSON.stringify(x).replace(/'/g, "&#39;")})'>Edit / 编辑</button><button class="btn secondary" onclick="waAction(${Number(x.id)},'${x.active === false ? "enable" : "disable"}')">${x.active === false ? "Enable" : "Disable"}</button>${!(x.is_default || x.isDefault) ? `<button class="btn secondary" onclick="waAction(${Number(x.id)},'default')">Set default</button>` : ""}<button class="btn danger" onclick="waAction(${Number(x.id)},'delete')">Delete</button></div></div>`).join("") || '<div class="empty">No WhatsApp numbers configured.</div>'
-      } catch (e) {
-        $("#waList").innerHTML = '<div class="empty">Unable to load WhatsApp configuration.</div>'
-      }
-    }
-
-    async function waAction(id, action) {
-      try {
-        await loadDataFromFile();
-        const idx = appData.whatsapp.findIndex(x => Number(x.id) === Number(id));
-        if (idx === -1) throw new Error('号码不存在');
-        if (action === 'delete') {
-          appData.whatsapp.splice(idx, 1);
-        } else if (action === 'disable') {
-          appData.whatsapp[idx].active = false;
-        } else if (action === 'enable') {
-          appData.whatsapp[idx].active = true;
-        } else if (action === 'default') {
-          appData.whatsapp.forEach(x => x.is_default = false);
-          appData.whatsapp[idx].is_default = true;
-        }
-        await saveDataToFile();
-        syncStateFromAppData();
-        toast("Saved / 已保存");
-        loadWa();
-        render();
-      } catch (e) { toast(e.message) }
-    }
+    async function loadEvents() { try { state.events = arr(await api("/api/admin/events")); renderAnalytics(); renderEvents() } catch (e) { toast(e.message) } }
+    async function loadWa() { try { state.whatsapp = arr(await api("/api/admin/whatsapp")); $("#waList").innerHTML = state.whatsapp.map(x => `<div class="pixel"><div><b>${esc(x.label || "WhatsApp")}</b><div class="id">${esc(x.number || x.phone || "")}</div><div class="muted">${x.is_default || x.isDefault ? "Default · " : ""}${x.active === false ? "Disabled" : "Active"}</div></div><div class="actions"><button class="btn secondary" onclick='editWa(${JSON.stringify(x).replace(/'/g, "&#39;")})'>Edit / 编辑</button><button class="btn secondary" onclick="waAction(${Number(x.id)},'${x.active === false ? "enable" : "disable"}')">${x.active === false ? "Enable" : "Disable"}</button>${!(x.is_default || x.isDefault) ? `<button class="btn secondary" onclick="waAction(${Number(x.id)},'default')">Set default</button>` : ""}<button class="btn danger" onclick="waAction(${Number(x.id)},'delete')">Delete</button></div></div>`).join("") || '<div class="empty">No WhatsApp numbers configured.</div>' } catch (e) { $("#waList").innerHTML = '<div class="empty">Unable to load WhatsApp configuration.</div>' } }
+    async function waAction(id, action) { try { await api("/api/admin/whatsapp/" + id, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ action }) }); toast("Saved / 已保存"); loadWa() } catch (e) { toast(e.message) } }
     function editWa(x) { $("#waId").value = x.id ?? ""; $("#waLabel").value = x.label || ""; $("#waNumber").value = x.number || x.phone || ""; $("#waModalTitle").textContent = "Edit WhatsApp number / 编辑号码"; $("#waModal").classList.add("open") }
     $("#addWa").onclick = () => { $("#waId").value = ""; $("#waLabel").value = ""; $("#waNumber").value = ""; $("#waModalTitle").textContent = "Add WhatsApp number / 添加号码"; $("#waModal").classList.add("open") };
     $("#closeWa").onclick = () => $("#waModal").classList.remove("open");
-    $("#waForm").onsubmit = async e => {
-      e.preventDefault();
-      try {
-        await loadDataFromFile();
-        const id = $("#waId").value;
-        const label = $("#waLabel").value;
-        const number = $("#waNumber").value;
-        if (id) {
-          const idx = appData.whatsapp.findIndex(x => Number(x.id) === Number(id));
-          if (idx !== -1) { appData.whatsapp[idx].label = label; appData.whatsapp[idx].number = number; }
-        } else {
-          const newId = Date.now();
-          appData.whatsapp.push({ id: newId, label, number, active: true, is_default: appData.whatsapp.length === 0 });
-        }
-        await saveDataToFile();
-        syncStateFromAppData();
-        $("#waModal").classList.remove("open"); toast("Saved / 已保存"); loadWa(); render();
-      } catch (err) { toast(err.message) }
-    };
+    $("#waForm").onsubmit = async e => { e.preventDefault(); try { await api("/api/admin/whatsapp", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ id: $("#waId").value || undefined, label: $("#waLabel").value, number: $("#waNumber").value }) }); $("#waModal").classList.remove("open"); toast("Saved / 已保存"); loadWa() } catch (err) { toast(err.message) } };
 
+    function normalizePixels(data) {
+      const c = data || {}; return { meta: getPixelArray(c, "meta"), tiktok: getPixelArray(c, "tiktok") };
+    }
     async function loadPixels() {
       try {
-        await loadDataFromFile();
-        syncStateFromAppData();
-        renderPixels();
+        const data = await api("/api/admin/pixels"); state.pixels = normalizePixels(data); renderPixels();
       } catch (e) {
-        state.pixels = { meta: getPixelArray(state.config, "meta"), tiktok: getPixelArray(state.config, "tiktok") };
-        renderPixels();
+        state.pixels = { meta: getPixelArray(state.config, "meta"), tiktok: getPixelArray(state.config, "tiktok") }; renderPixels();
       }
     }
     function renderPixels() {
@@ -1360,53 +1186,12 @@
     function openPixel(kind, x = null) { $("#pixelId").value = x?.id || x?.pixel_id || ""; $("#pixelKind").value = kind; $("#pixelCode").value = x?.id || x?.pixel_id || ""; $("#pixelName").value = x?.name || ""; $$('#pixelForm input[type="checkbox"]').forEach(c => c.checked = (x?.events || x?.event_rules || ["pageview", "whatsapp_click", "form_submit"]).includes(c.value)); $("#pixelModalTitle").textContent = (x ? "Edit " : "Add ") + (kind === "meta" ? "Meta" : "TikTok") + " Pixel"; $("#pixelModal").classList.add("open") }
     function editPixel(kind, x) { openPixel(kind, x) }
     $("#addMeta").onclick = () => openPixel("meta"); $("#addTikTok").onclick = () => openPixel("tiktok"); $("#closePixel").onclick = () => $("#pixelModal").classList.remove("open"); $("#cancelPixel").onclick = () => $("#pixelModal").classList.remove("open");
-    $("#pixelForm").onsubmit = async e => {
-      e.preventDefault();
-      try {
-        await loadDataFromFile();
-        const kind = $("#pixelKind").value;
-        const currentId = $("#pixelId").value;
-        const code = $("#pixelCode").value;
-        const name = $("#pixelName").value;
-        const events = $$('#pixelForm input[type="checkbox"]:checked').map(x => x.value);
-        const enabled = true;
-        const targetArray = kind === 'meta' ? appData.pixels.meta : appData.pixels.tiktok;
-        if (currentId) {
-          const idx = targetArray.findIndex(x => String(x.id) === String(currentId));
-          if (idx !== -1) {
-            targetArray[idx] = { ...targetArray[idx], name, events, enabled };
-          }
-        } else {
-          const newId = code || Date.now().toString();
-          targetArray.push({ id: newId, name, events, enabled });
-        }
-        await saveDataToFile();
-        syncStateFromAppData();
-        $("#pixelModal").classList.remove("open"); toast("Pixel saved / 像素已保存"); loadPixels(); load();
-      } catch (err) { toast(err.message) }
-    };
-    async function pixelAction(kind, id, action) {
-      try {
-        await loadDataFromFile();
-        const targetArray = kind === 'meta' ? appData.pixels.meta : appData.pixels.tiktok;
-        const idx = targetArray.findIndex(x => String(x.id) === String(id));
-        if (idx === -1) throw new Error('Pixel 不存在');
-        if (action === 'delete') {
-          targetArray.splice(idx, 1);
-        } else if (action === 'toggle') {
-          targetArray[idx].enabled = targetArray[idx].enabled === false ? true : false;
-        }
-        await saveDataToFile();
-        syncStateFromAppData();
-        toast("Saved / 已保存"); loadPixels();
-      } catch (e) { toast(e.message) }
-    }
+    $("#pixelForm").onsubmit = async e => { e.preventDefault(); const events = $$('#pixelForm input[type="checkbox"]:checked').map(x => x.value); const body = { id: $("#pixelId").value || undefined, name: $("#pixelName").value, events, enabled: true }; const kind = $("#pixelKind").value; try { if ($("#pixelId").value) { await api("/api/admin/pixels/" + encodeURIComponent($("#pixelId").value), { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ kind, ...body }) }) } else { await api("/api/admin/pixels", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ kind, ...body, pixel_id: $("#pixelCode").value }) }) } $("#pixelModal").classList.remove("open"); toast("Pixel saved / 像素已保存"); loadPixels(); load() } catch (err) { toast(err.message) } };
+    async function pixelAction(kind, id, action) { try { await api("/api/admin/pixels/" + encodeURIComponent(id), { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ kind, action }) }); toast("Saved / 已保存"); loadPixels() } catch (e) { toast(e.message) } }
 
     async function loadLeads() {
       try {
-        await loadDataFromFile();
-        syncStateFromAppData();
-        const data = state.leads;
+        const data = arr(await api("/api/admin/leads")); state.leads = data;
         $("#leadRows").innerHTML = data.map((x, i) => `<tr><td>${esc(time(x.created_at || x.createdAt))}</td><td>${esc(x.name || x.full_name || "—")}</td><td>${esc(x.phone || x.email || x.contact || "—")}</td><td>${esc(x.campaign || x.utm_campaign || "—")}</td><td><span class="badge">${esc(x.status || "new")}</span></td><td><button class="btn secondary" onclick="viewLead(${i})">View / 查看</button></td></tr>`).join("") || '<tr><td colspan="6" class="empty">No leads yet.</td></tr>';
         const statuses = data.map(x => String(x.status || "new").toLowerCase()); $("#leadNew").textContent = statuses.filter(x => x === "new").length; $("#leadContacted").textContent = statuses.filter(x => x === "contacted").length; $("#leadWon").textContent = statuses.filter(x => x === "won").length; $("#leadTotal").textContent = fmt(data.length);
       } catch (e) { $("#leadRows").innerHTML = '<tr><td colspan="6" class="empty">Lead API unavailable / 询盘 API 暂不可用。</td></tr>' }
@@ -1414,26 +1199,1503 @@
     function viewLead(i) { const x = state.leads[i] || {}; $("#leadDetail").innerHTML = Object.entries(x).map(([k, v]) => `<div style="padding:9px 0;border-bottom:1px solid var(--line)"><b>${esc(k)}</b><div class="muted" style="word-break:break-word">${esc(typeof v === "object" ? JSON.stringify(v) : v)}</div></div>`).join(""); $("#leadModal").classList.add("open") }
     $("#closeLead").onclick = () => $("#leadModal").classList.remove("open"); $("#loadLeads").onclick = loadLeads;
 
-    async function saveSettings(form_enabled, routing_mode) {
-      try {
-        await loadDataFromFile();
-        appData.config = appData.config || {};
-        if (form_enabled !== undefined) appData.config.form_enabled = form_enabled;
-        if (routing_mode !== undefined) appData.config.routing_mode = routing_mode;
-        await saveDataToFile();
-        syncStateFromAppData();
-        toast("Saved / 已保存"); load();
-      } catch (e) { toast(e.message) }
-    }
+    async function saveSettings(form_enabled, routing_mode) { try { await api("/api/admin/settings", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ form_enabled, routing_mode }) }); toast("Saved / 已保存"); load() } catch (e) { toast(e.message) } }
     $("#routingSelect").onchange = () => saveSettings(state.config?.form_enabled ?? state.config?.formEnabled, $("#routingSelect").value);
     $("#routingSettings").onchange = () => saveSettings(state.config?.form_enabled ?? state.config?.formEnabled, $("#routingSettings").value);
     $("#formToggle").onclick = () => saveSettings(!(state.config?.form_enabled ?? state.config?.formEnabled), state.config?.routing_mode || "single");
-    $("#refresh").onclick = load; $("#loadEvents").onclick = loadEvents;
+    $("#refresh").onclick = load; $("#loadEvents").onclick = loadEvents; $("#logout").onclick = () => location.href = "/api/logout";
     $("#langZh").onclick = () => { lang = "zh"; applyLang(); render() }; $("#langEn").onclick = () => { lang = "en"; applyLang(); render() };
-
-    applyLang();
-    load();
+    applyLang(); load();
   </script>
+  <!-- ============ 登录认证脚本 ============ -->
+  <script>
+    (function () {
+      "use strict";
+      // ========== 配置 ==========
+      // 默认密码，实际使用时可修改
+      const DEFAULT_PASSWORD = 'admin123';
+      // 存储登录状态的 key
+      const SESSION_KEY = 'sulan_admin_session';
+
+      // ========== DOM 引用 ==========
+      const overlay = document.getElementById('login-overlay');
+      const loginForm = document.getElementById('loginForm');
+      const passwordInput = document.getElementById('loginPassword');
+      const loginBtn = document.getElementById('loginBtn');
+      const errorMsg = document.getElementById('loginError');
+
+      // ========== 检查登录状态 ==========
+      function isLoggedIn() {
+        try {
+          const session = localStorage.getItem(SESSION_KEY);
+          if (!session) return false;
+          const data = JSON.parse(session);
+          // 检查是否过期（24小时）
+          if (Date.now() - data.timestamp > 24 * 60 * 60 * 1000) {
+            localStorage.removeItem(SESSION_KEY);
+            return false;
+          }
+          return true;
+        } catch {
+          return false;
+        }
+      }
+
+      // ========== 设置登录状态 ==========
+      function setLoggedIn() {
+        localStorage.setItem(SESSION_KEY, JSON.stringify({
+          loggedIn: true,
+          timestamp: Date.now()
+        }));
+      }
+
+      // ========== 清除登录状态 ==========
+      function clearLoggedIn() {
+        localStorage.removeItem(SESSION_KEY);
+      }
+
+      // ========== 显示登录界面 ==========
+      function showLogin() {
+        overlay.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+        if (passwordInput) {
+          passwordInput.value = '';
+          passwordInput.focus();
+        }
+      }
+
+      // ========== 隐藏登录界面 ==========
+      function hideLogin() {
+        overlay.classList.add('hidden');
+        document.body.style.overflow = '';
+      }
+
+      // ========== 登录处理 ==========
+      function handleLogin(event) {
+        event.preventDefault();
+
+        const password = passwordInput.value.trim();
+        errorMsg.textContent = '';
+
+        if (!password) {
+          errorMsg.textContent = '请输入密码';
+          passwordInput.focus();
+          return;
+        }
+
+        if (password !== DEFAULT_PASSWORD) {
+          errorMsg.textContent = '密码错误，请重试';
+          passwordInput.value = '';
+          passwordInput.focus();
+          return;
+        }
+
+        // 登录成功
+        setLoggedIn();
+        hideLogin();
+        // 重新加载数据（如果有 load 函数）
+        if (typeof load === 'function') {
+          load();
+        }
+      }
+
+      // ========== 退出登录 ==========
+      function doLogout() {
+        clearLoggedIn();
+        // 如果页面有刷新功能，刷新页面回到登录状态
+        showLogin();
+        // 重置页面数据
+        if (typeof load === 'function') {
+          // 清空显示数据
+          const state = window.state || {};
+          state.stats = {};
+          state.config = {};
+          state.events = [];
+          state.leads = [];
+          state.whatsapp = [];
+          state.pixels = { meta: [], tiktok: [] };
+          if (typeof render === 'function') render();
+        }
+        // 重置系统状态显示
+        const systemStatus = document.getElementById('systemStatus');
+        if (systemStatus) {
+          systemStatus.textContent = '● 未登录';
+          systemStatus.classList.add('err');
+        }
+        const workerState = document.getElementById('workerState');
+        if (workerState) {
+          workerState.textContent = '● 请登录';
+        }
+        // 清空各个面板数据
+        document.querySelectorAll('.num').forEach(el => el.textContent = '—');
+        document.querySelectorAll('.badge').forEach(el => {
+          if (el.id !== 'metaBadge' && el.id !== 'ttBadge') {
+            el.textContent = '—';
+          }
+        });
+        document.getElementById('metaBadge').textContent = '—';
+        document.getElementById('ttBadge').textContent = '—';
+        document.getElementById('metaState').textContent = 'Not configured / 未配置';
+        document.getElementById('ttState').textContent = 'Not configured / 未配置';
+        document.getElementById('recentClicks').innerHTML = '<tr><td colspan="4" class="empty">请登录后查看</td></tr>';
+        document.getElementById('eventRows').innerHTML = '<tr><td colspan="6" class="empty">请登录后查看</td></tr>';
+        document.getElementById('leadRows').innerHTML = '<tr><td colspan="6" class="empty">请登录后查看</td></tr>';
+        document.getElementById('metaPixelBox').innerHTML = '<div class="empty">请登录后查看</div>';
+        document.getElementById('ttPixelBox').innerHTML = '<div class="empty">请登录后查看</div>';
+        document.getElementById('waList').innerHTML = '<div class="empty">请登录后查看</div>';
+
+        toast('已退出登录');
+      }
+
+      // ========== 绑定登录表单事件 ==========
+      if (loginForm) {
+        loginForm.addEventListener('submit', handleLogin);
+      }
+
+      // 回车键触发登录
+      if (passwordInput) {
+        passwordInput.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter') {
+            loginForm.dispatchEvent(new Event('submit'));
+          }
+        });
+      }
+
+      // ========== 劫持退出登录按钮 ==========
+      const logoutBtn = document.getElementById('logout');
+      if (logoutBtn) {
+        // 保存原有的点击事件
+        const originalLogout = logoutBtn.onclick;
+        logoutBtn.onclick = function (e) {
+          if (e) e.preventDefault();
+          doLogout();
+          if (typeof originalLogout === 'function') {
+            // 不执行原有的 location.href 跳转
+          }
+        };
+      }
+
+      // ========== 劫持刷新按钮 - 检查登录状态 ==========
+      const refreshBtn = document.getElementById('refresh');
+      if (refreshBtn) {
+        const originalRefresh = refreshBtn.onclick;
+        refreshBtn.onclick = function (e) {
+          if (!isLoggedIn()) {
+            showLogin();
+            toast('请先登录');
+            return;
+          }
+          if (typeof originalRefresh === 'function') {
+            originalRefresh.call(this, e);
+          }
+        };
+      }
+
+      // ========== 劫持各个页面的数据加载 ==========
+      // 在加载数据前检查登录状态
+      const originalLoad = window.load;
+      if (typeof window.load === 'function') {
+        window.load = function () {
+          if (!isLoggedIn()) {
+            showLogin();
+            return;
+          }
+          return originalLoad.call(this);
+        };
+      }
+
+      // ========== 初始化 ==========
+      // 检查登录状态，如果已登录则隐藏登录界面
+      if (isLoggedIn()) {
+        hideLogin();
+        // 延迟加载数据
+        setTimeout(function () {
+          if (typeof load === 'function') {
+            load();
+          }
+        }, 100);
+      } else {
+        showLogin();
+        // 隐藏后台内容（通过遮罩覆盖）
+      }
+
+      // 暴露退出方法到全局，方便调试
+      window.sulanLogout = doLogout;
+
+      console.log('🔐 登录保护已启用');
+      // console.log('💡 默认密码: admin123');
+      // console.log('💡 控制台执行 sulanLogout() 可退出登录');
+
+    })();
+  </script>
+  <!-- ============ 登录认证脚本结束 ============ -->
+
+  <script>
+    /* =========================================================
+       V8.1 SAFE UI PATCH
+       - Pixel: reliable add/edit/toggle/delete, event normalization
+       - WhatsApp: add/edit/toggle/default/delete/test redirect
+       - Refresh: visible loading + complete reload
+       - Keeps V8 API endpoints unchanged
+    ========================================================= */
+    (function () {
+      "use strict";
+
+      const $v81 = (s) => document.querySelector(s);
+      const $$v81 = (s) => [...document.querySelectorAll(s)];
+
+      function toastV81(message) {
+        if (typeof toast === "function") {
+          toast(message);
+          return;
+        }
+        const el = $v81("#toast");
+        if (!el) return;
+        el.textContent = message;
+        el.classList.add("show");
+        setTimeout(() => el.classList.remove("show"), 2200);
+      }
+
+      function escV81(value) {
+        if (typeof esc === "function") return esc(value);
+        return String(value ?? "").replace(/[&<>"']/g, (m) => ({
+          "&": "&amp;",
+          "<": "&lt;",
+          ">": "&gt;",
+          '"': "&quot;",
+          "'": "&#039;"
+        }[m]));
+      }
+
+      function normalizeEventV81(value) {
+        const map = {
+          pageview: "pageview",
+          "page_view": "pageview",
+          viewcontent: "view_content",
+          "view_content": "view_content",
+          lead: "lead",
+          form_submit: "form_submit",
+          formsubmit: "form_submit",
+          whatsapp_click: "whatsapp_click",
+          "whatsapp-click": "whatsapp_click",
+          whatsappclick: "whatsapp_click"
+        };
+        return map[String(value ?? "").trim().toLowerCase()] || "";
+      }
+
+      function normalizeEventsV81(values) {
+        const defaults = ["pageview", "whatsapp_click", "form_submit"];
+        const raw = Array.isArray(values) ? values : [];
+        const out = [];
+        for (const item of raw) {
+          const event = normalizeEventV81(item);
+          if (event && !out.includes(event)) out.push(event);
+        }
+        return out.length ? out : defaults;
+      }
+
+      function pixelArrayV81(data, kind) {
+        const source = data?.[kind];
+        if (!Array.isArray(source)) return [];
+        return source
+          .map((x, i) => ({
+            id: String(x?.id ?? x?.pixel_id ?? "").trim(),
+            name: String(x?.name ?? `${kind === "meta" ? "Meta" : "TikTok"} Pixel ${i + 1}`),
+            enabled: x?.enabled !== false,
+            events: normalizeEventsV81(x?.events)
+          }))
+          .filter(x => x.id);
+      }
+
+      function ensurePixelEnabledFieldV81() {
+        let el = $v81("#pixelEnabled");
+        if (!el) {
+          el = document.createElement("input");
+          el.type = "hidden";
+          el.id = "pixelEnabled";
+          const form = $v81("#pixelForm");
+          if (form) form.prepend(el);
+        }
+        return el;
+      }
+
+      function ensureWaDefaultFieldV81() {
+        let row = $v81("#waDefaultRow");
+        if (!row) {
+          const form = $v81("#waForm");
+          if (!form) return null;
+
+          row = document.createElement("label");
+          row.id = "waDefaultRow";
+          row.className = "check";
+          row.style.display = "flex";
+          row.style.alignItems = "center";
+          row.style.gap = "8px";
+          row.style.margin = "6px 0 14px";
+          row.innerHTML =
+            '<input type="checkbox" id="waDefault"> ' +
+            'Set as default / 设为默认';
+          const submit = form.querySelector("button[type='submit'],button.btn.primary");
+          if (submit) form.insertBefore(row, submit);
+          else form.appendChild(row);
+        }
+        return $v81("#waDefault");
+      }
+
+      async function loadPixelsV81() {
+        try {
+          const data = await api("/api/admin/pixels");
+          state.pixels = {
+            meta: pixelArrayV81(data, "meta"),
+            tiktok: pixelArrayV81(data, "tiktok")
+          };
+          renderPixelsV81();
+        } catch (err) {
+          console.error(err);
+          toastV81("Pixel load failed / 像素加载失败");
+        }
+      }
+
+      function renderPixelsV81() {
+        const renderOne = (kind, items) => {
+          if (!items.length) {
+            return '<div class="empty">No pixels configured / 暂无已配置像素</div>';
+          }
+
+          return items.map((x, index) => {
+            const id = escV81(x.id);
+            const name = escV81(
+              x.name || `${kind === "meta" ? "Meta" : "TikTok"} Pixel ${index + 1}`
+            );
+            const enabled = x.enabled !== false;
+            const events = normalizeEventsV81(x.events);
+
+            return `
+          <div class="pixel" data-v81-pixel-kind="${kind}" data-v81-pixel-id="${id}">
+            <div style="flex:1;min-width:220px">
+              <b>${name}</b>
+              <div class="id">${id}</div>
+              <div class="muted">
+                ${enabled ? "Active / 已启用" : "Disabled / 已停用"}
+              </div>
+              <div class="rulegrid">
+                ${events.map(ev =>
+              `<span class="badge">${escV81(ev)}</span>`
+            ).join("")}
+              </div>
+            </div>
+            <div class="actions" style="display:flex;gap:7px;flex-wrap:wrap">
+              <button type="button" class="btn secondary"
+                data-v81-action="pixel-edit"
+                data-kind="${kind}"
+                data-id="${id}">
+                Edit / 编辑
+              </button>
+              <button type="button" class="btn secondary"
+                data-v81-action="pixel-toggle"
+                data-kind="${kind}"
+                data-id="${id}">
+                ${enabled ? "Disable / 停用" : "Enable / 启用"}
+              </button>
+              <button type="button" class="btn danger"
+                data-v81-action="pixel-delete"
+                data-kind="${kind}"
+                data-id="${id}">
+                Delete / 删除
+              </button>
+            </div>
+          </div>
+        `;
+          }).join("");
+        };
+
+        const meta = state.pixels?.meta || [];
+        const tiktok = state.pixels?.tiktok || [];
+
+        const metaBox = $v81("#metaPixelBox");
+        const ttBox = $v81("#ttPixelBox");
+
+        if (metaBox) metaBox.innerHTML = renderOne("meta", meta);
+        if (ttBox) ttBox.innerHTML = renderOne("tiktok", tiktok);
+      }
+
+      function openPixelV81(kind, item) {
+        const modal = $v81("#pixelModal");
+        if (!modal) return;
+
+        const id = item?.id || item?.pixel_id || "";
+        const events = normalizeEventsV81(item?.events);
+
+        $v81("#pixelId").value = id;
+        $v81("#pixelKind").value = kind;
+        $v81("#pixelCode").value = id;
+        $v81("#pixelName").value = item?.name || "";
+        ensurePixelEnabledFieldV81().value =
+          item ? (item.enabled !== false ? "true" : "false") : "true";
+
+        $v81("#pixelForm")
+          ?.querySelectorAll("input[type='checkbox']")
+          .forEach((checkbox) => {
+            const normalized = normalizeEventV81(checkbox.value);
+            checkbox.checked = events.includes(normalized);
+          });
+
+        const title = $v81("#pixelModalTitle");
+        if (title) {
+          title.textContent =
+            `${item ? "Edit" : "Add"} ${kind === "meta" ? "Meta" : "TikTok"} Pixel`;
+        }
+
+        modal.classList.add("open");
+      }
+
+      async function pixelActionV81(kind, id, action) {
+        if (!id) return;
+
+        if (action === "delete") {
+          if (!confirm("Delete this Pixel? / 确定删除此 Pixel？")) return;
+        }
+
+        try {
+          await api(`/api/admin/pixels/${encodeURIComponent(id)}`, {
+            method: "PATCH",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ kind, action })
+          });
+
+          toastV81(
+            action === "delete"
+              ? "Pixel deleted / 像素已删除"
+              : action === "toggle"
+                ? "Pixel status updated / 像素状态已更新"
+                : "Pixel saved / 像素已保存"
+          );
+
+          await loadPixelsV81();
+          if (typeof load === "function") await load();
+        } catch (err) {
+          console.error(err);
+          toastV81(err.message || "Pixel operation failed / 像素操作失败");
+        }
+      }
+
+      async function savePixelV81(event) {
+        event.preventDefault();
+
+        const form = $v81("#pixelForm");
+        if (!form) return;
+
+        const kind = $v81("#pixelKind").value;
+        const currentId = $v81("#pixelId").value.trim();
+        const code = $v81("#pixelCode").value.trim();
+        const name = $v81("#pixelName").value.trim();
+        const id = currentId || code;
+
+        if (!id) {
+          toastV81("Pixel ID is required / 请输入 Pixel ID");
+          return;
+        }
+
+        const events = normalizeEventsV81(
+          $$v81("#pixelForm input[type='checkbox']:checked")
+            .map(x => x.value)
+        );
+
+        const enabledField = ensurePixelEnabledFieldV81();
+        const enabled = enabledField.value !== "false";
+
+        try {
+          if (currentId) {
+            await api(`/api/admin/pixels/${encodeURIComponent(currentId)}`, {
+              method: "PATCH",
+              headers: { "content-type": "application/json" },
+              body: JSON.stringify({
+                kind,
+                name,
+                enabled,
+                events
+              })
+            });
+          } else {
+            await api("/api/admin/pixels", {
+              method: "POST",
+              headers: { "content-type": "application/json" },
+              body: JSON.stringify({
+                kind,
+                pixel_id: id,
+                name: name || "Pixel",
+                enabled: true,
+                events
+              })
+            });
+          }
+
+          $v81("#pixelModal")?.classList.remove("open");
+          toastV81("Pixel saved / 像素已保存");
+          await loadPixelsV81();
+          if (typeof load === "function") await load();
+        } catch (err) {
+          console.error(err);
+          toastV81(err.message || "Pixel save failed / 像素保存失败");
+        }
+      }
+
+      async function loadWhatsAppV81() {
+        try {
+          const data = await api("/api/admin/whatsapp");
+          state.whatsapp = Array.isArray(data) ? data : [];
+          renderWhatsAppV81();
+        } catch (err) {
+          console.error(err);
+          const box = $v81("#waList");
+          if (box) {
+            box.innerHTML =
+              '<div class="empty">Unable to load WhatsApp configuration / 无法加载 WhatsApp 配置</div>';
+          }
+        }
+      }
+
+      function renderWhatsAppV81() {
+        const box = $v81("#waList");
+        if (!box) return;
+
+        const list = Array.isArray(state.whatsapp) ? state.whatsapp : [];
+
+        if (!list.length) {
+          box.innerHTML =
+            '<div class="empty">No WhatsApp numbers configured / 尚未配置 WhatsApp 号码</div>';
+          return;
+        }
+
+        box.innerHTML = list.map((x) => {
+          const id = Number(x.id);
+          const active = x.active !== false;
+          const isDefault = x.is_default === true;
+
+          return `
+        <div class="pixel" data-v81-wa-id="${id}">
+          <div style="flex:1;min-width:240px">
+            <b>${escV81(x.label || "WhatsApp")}</b>
+            <div class="id">${escV81(x.number || "")}</div>
+            <div class="muted">
+              ${isDefault ? "Default / 默认 · " : ""}
+              ${active ? "Active / 已启用" : "Disabled / 已停用"}
+            </div>
+          </div>
+
+          <div class="actions" style="display:flex;gap:7px;flex-wrap:wrap">
+            <button type="button" class="btn secondary"
+              data-v81-action="wa-edit"
+              data-id="${id}">
+              Edit / 编辑
+            </button>
+
+            <button type="button" class="btn secondary"
+              data-v81-action="wa-toggle"
+              data-id="${id}">
+              ${active ? "Disable / 停用" : "Enable / 启用"}
+            </button>
+
+            ${!isDefault
+              ? `<button type="button" class="btn secondary"
+                    data-v81-action="wa-default"
+                    data-id="${id}">
+                    Set default / 设为默认
+                   </button>`
+              : ""
+            }
+
+            <button type="button" class="btn secondary"
+              data-v81-action="wa-test"
+              data-id="${id}">
+              Test / 测试
+            </button>
+
+            <button type="button" class="btn danger"
+              data-v81-action="wa-delete"
+              data-id="${id}">
+              Delete / 删除
+            </button>
+          </div>
+        </div>
+      `;
+        }).join("");
+      }
+
+      function openWhatsAppV81(item) {
+        ensureWaDefaultFieldV81();
+
+        $v81("#waId").value = item?.id ?? "";
+        $v81("#waLabel").value = item?.label || "";
+        $v81("#waNumber").value = item?.number || item?.phone || "";
+
+        const defaultBox = $v81("#waDefault");
+        if (defaultBox) defaultBox.checked = !!item?.is_default;
+
+        const title = $v81("#waModalTitle");
+        if (title) {
+          title.textContent =
+            `${item ? "Edit" : "Add"} WhatsApp number / ${item ? "编辑号码" : "添加号码"}`;
+        }
+
+        $v81("#waModal")?.classList.add("open");
+      }
+
+      async function waActionV81(id, action) {
+        if (!id) return;
+
+        if (action === "delete") {
+          if (!confirm("Delete this WhatsApp number? / 确定删除此号码？")) return;
+        }
+
+        try {
+          await api(`/api/admin/whatsapp/${encodeURIComponent(id)}`, {
+            method: "PATCH",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ action })
+          });
+
+          toastV81(
+            action === "delete"
+              ? "WhatsApp deleted / 号码已删除"
+              : action === "default"
+                ? "Default number updated / 默认号码已更新"
+                : "WhatsApp status updated / 号码状态已更新"
+          );
+
+          await loadWhatsAppV81();
+          if (typeof load === "function") await load();
+        } catch (err) {
+          console.error(err);
+          toastV81(err.message || "WhatsApp operation failed / WhatsApp 操作失败");
+        }
+      }
+
+      async function saveWhatsAppV81(event) {
+        event.preventDefault();
+
+        const id = $v81("#waId").value.trim();
+        const label = $v81("#waLabel").value.trim();
+        const number = $v81("#waNumber").value.trim();
+        const defaultBox = ensureWaDefaultFieldV81();
+        const isDefault = !!defaultBox?.checked;
+
+        if (!number) {
+          toastV81("Phone number is required / 请输入电话号码");
+          return;
+        }
+
+        try {
+          await api("/api/admin/whatsapp", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+              id: id || undefined,
+              label: label || "WhatsApp",
+              number,
+              active: true,
+              is_default: isDefault
+            })
+          });
+
+          $v81("#waModal")?.classList.remove("open");
+          toastV81("WhatsApp saved / WhatsApp 已保存");
+          await loadWhatsAppV81();
+          if (typeof load === "function") await load();
+        } catch (err) {
+          console.error(err);
+          toastV81(err.message || "WhatsApp save failed / WhatsApp 保存失败");
+        }
+      }
+
+      function testWhatsAppV81(id) {
+        const item = (state.whatsapp || []).find(x => Number(x.id) === Number(id));
+        if (!item) {
+          toastV81("WhatsApp number not found / 找不到号码");
+          return;
+        }
+
+        if (item.active === false) {
+          toastV81("This number is disabled / 此号码已停用");
+          return;
+        }
+
+        const url =
+          "/go/whatsapp?utm_source=admin_test&utm_campaign=whatsapp_test&utm_content=" +
+          encodeURIComponent(String(item.label || id));
+
+        window.open(url, "_blank", "noopener,noreferrer");
+      }
+
+      async function refreshAllV81() {
+        const button = $v81("#refresh");
+        const oldText = button?.textContent || "";
+
+        try {
+          if (button) {
+            button.disabled = true;
+            button.textContent = "Refreshing… / 刷新中…";
+          }
+
+          await Promise.all([
+            loadPixelsV81(),
+            loadWhatsAppV81(),
+            typeof load === "function" ? load() : Promise.resolve()
+          ]);
+
+          toastV81("Refreshed / 已刷新");
+        } catch (err) {
+          console.error(err);
+          toastV81("Refresh failed / 刷新失败");
+        } finally {
+          if (button) {
+            button.disabled = false;
+            button.textContent = oldText || "Refresh / 刷新";
+          }
+        }
+      }
+
+      /* Replace the V8 loader bindings without changing the API layer. */
+      try {
+        loadPixels = loadPixelsV81;
+      } catch (_) { }
+
+      try {
+        loadWa = loadWhatsAppV81;
+      } catch (_) { }
+
+      /* Pixel buttons */
+      $v81("#addMeta")?.addEventListener("click", () => openPixelV81("meta"));
+      $v81("#addTikTok")?.addEventListener("click", () => openPixelV81("tiktok"));
+
+      $v81("#closePixel")?.addEventListener("click", () => {
+        $v81("#pixelModal")?.classList.remove("open");
+      });
+
+      $v81("#cancelPixel")?.addEventListener("click", () => {
+        $v81("#pixelModal")?.classList.remove("open");
+      });
+
+      $v81("#pixelForm")?.addEventListener("submit", savePixelV81);
+
+      /* WhatsApp buttons */
+      $v81("#addWa")?.addEventListener("click", () => openWhatsAppV81());
+
+      $v81("#closeWa")?.addEventListener("click", () => {
+        $v81("#waModal")?.classList.remove("open");
+      });
+
+      $v81("#waForm")?.addEventListener("submit", saveWhatsAppV81);
+
+      /* Dynamic Pixel + WhatsApp actions */
+      document.addEventListener("click", (event) => {
+        const button = event.target.closest("[data-v81-action]");
+        if (!button) return;
+
+        const action = button.dataset.v81Action;
+        const id = button.dataset.id;
+        const kind = button.dataset.kind;
+
+        if (action === "pixel-edit") {
+          const item = (state.pixels?.[kind] || []).find(x => String(x.id) === String(id));
+          if (item) openPixelV81(kind, item);
+          return;
+        }
+
+        if (action === "pixel-toggle") {
+          pixelActionV81(kind, id, "toggle");
+          return;
+        }
+
+        if (action === "pixel-delete") {
+          pixelActionV81(kind, id, "delete");
+          return;
+        }
+
+        if (action === "wa-edit") {
+          const item = (state.whatsapp || []).find(x => Number(x.id) === Number(id));
+          if (item) openWhatsAppV81(item);
+          return;
+        }
+
+        if (action === "wa-toggle") {
+          waActionV81(id, "toggle");
+          return;
+        }
+
+        if (action === "wa-default") {
+          waActionV81(id, "default");
+          return;
+        }
+
+        if (action === "wa-delete") {
+          waActionV81(id, "delete");
+          return;
+        }
+
+        if (action === "wa-test") {
+          testWhatsAppV81(id);
+          return;
+        }
+      });
+
+      /* Refresh */
+      if ($v81("#refresh")) {
+        $v81("#refresh").onclick = function (event) {
+          if (event) {
+            event.preventDefault();
+          }
+
+          refreshAllV81();
+        };
+      }
+
+      /* Correct the old V8 ViewContent checkbox value. */
+      const viewContent = $v81("#pixelForm input[value='viewcontent']");
+      if (viewContent) viewContent.value = "view_content";
+
+      /* Initial load of the enhanced modules. */
+      Promise.all([
+        loadPixelsV81(),
+        loadWhatsAppV81()
+      ]).catch(console.error);
+
+    })();
+  </script>
+  <!-- SULAN ADMIN V8.2
+     Form + Leads safe enhancement
+     Paste this block BEFORE </body> in public/admin/index.html.
+     Do NOT replace the existing V8/V8.1 scripts.
+-->
+  <script>
+    (function () {
+      "use strict";
+
+      const $82 = (s, root = document) => root.querySelector(s);
+      const $$82 = (s, root = document) => [...root.querySelectorAll(s)];
+
+      const FIELD_LABELS_82 = {
+        name: ["Name / 姓名", "Name"],
+        email: ["Email / 邮箱", "Email"],
+        whatsapp: ["WhatsApp", "WhatsApp"],
+        company: ["Company / 公司", "Company"],
+        country: ["Country / 国家", "Country"],
+        message: ["Message / 留言", "Message"]
+      };
+
+      const STATUS_LABELS_82 = {
+        new: ["New", "新询盘"],
+        contacted: ["Contacted", "已联系"],
+        qualified: ["Qualified", "已筛选"],
+        won: ["Won", "已成交"],
+        lost: ["Lost", "已失效"]
+      };
+
+      function esc82(v) {
+        if (typeof esc === "function") return esc(v);
+        return String(v ?? "").replace(/[&<>"']/g, m => ({
+          "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;"
+        }[m]));
+      }
+
+      function toast82(msg) {
+        if (typeof toast === "function") return toast(msg);
+        alert(msg);
+      }
+
+      async function api82(path, options = {}) {
+        const r = await fetch(path, {
+          ...options,
+          cache: "no-store",
+          credentials: "same-origin",
+          headers: {
+            "Accept": "application/json",
+            ...(options.headers || {})
+          }
+        });
+        const text = await r.text();
+        let data = null;
+        try { data = text ? JSON.parse(text) : null; } catch { data = text; }
+        if (!r.ok) {
+          throw new Error(
+            typeof data === "string"
+              ? data
+              : (data?.error || data?.message || `HTTP ${r.status}`)
+          );
+        }
+        return data;
+      }
+
+      function ensureFormPanel82() {
+        const settings = $82("#settings");
+        if (!settings || $82("#v82FormPanel")) return;
+
+        const panel = document.createElement("div");
+        panel.id = "v82FormPanel";
+        panel.className = "card";
+        panel.style.marginTop = "16px";
+        panel.innerHTML = `
+      <div class="sectionhead">
+        <h2>Lead Form / 询盘表单</h2>
+        <span id="v82FormStatus" class="badge">Loading…</span>
+      </div>
+
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:18px">
+        <div>
+          <b>Form status / 表单状态</b>
+          <div class="muted">Control whether the public inquiry form is available.</div>
+        </div>
+        <button type="button" id="v82FormToggle" class="btn primary">Loading…</button>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 110px 110px;gap:8px;margin-bottom:8px;font-weight:700">
+        <div>Field / 字段</div><div>Enabled / 开启</div><div>Required / 必填</div>
+      </div>
+
+      <div id="v82FieldRows"></div>
+
+      <div style="display:flex;justify-content:flex-end;margin-top:16px">
+        <button type="button" id="v82SaveForm" class="btn primary">
+          Save form settings / 保存表单设置
+        </button>
+      </div>
+    `;
+
+        const anchor =
+          settings.querySelector(".card:last-child") ||
+          settings.lastElementChild;
+        if (anchor) anchor.after(panel);
+        else settings.appendChild(panel);
+
+        renderFormFields82({});
+      }
+
+      function renderFormFields82(fields) {
+        const box = $82("#v82FieldRows");
+        if (!box) return;
+
+        const keys = Object.keys(FIELD_LABELS_82);
+        box.innerHTML = keys.map(key => {
+          const f = fields?.[key] || { enabled: true, required: false };
+          const disabled = !f.enabled;
+          return `
+        <div data-v82-field="${key}"
+          style="display:grid;grid-template-columns:1fr 110px 110px;gap:8px;align-items:center;padding:10px 0;border-top:1px solid var(--line,#e5e9e7)">
+          <div>
+            <b>${esc82(FIELD_LABELS_82[key][0])}</b>
+            <div class="muted">${esc82(FIELD_LABELS_82[key][1])}</div>
+          </div>
+          <label style="display:flex;justify-content:center">
+            <input type="checkbox" data-v82-enabled ${f.enabled ? "checked" : ""}>
+          </label>
+          <label style="display:flex;justify-content:center">
+            <input type="checkbox" data-v82-required ${f.required ? "checked" : ""} ${disabled ? "disabled" : ""}>
+          </label>
+        </div>
+      `;
+        }).join("");
+
+        $$82("[data-v82-enabled]").forEach(cb => {
+          cb.addEventListener("change", () => {
+            const row = cb.closest("[data-v82-field]");
+            const required = $82("[data-v82-required]", row);
+            if (required) required.disabled = !cb.checked;
+            if (!cb.checked && required) required.checked = false;
+          });
+        });
+      }
+
+      function collectFormFields82() {
+        const out = {};
+        $$82("[data-v82-field]").forEach(row => {
+          const key = row.dataset.v82Field;
+          const enabled = !!$82("[data-v82-enabled]", row)?.checked;
+          const required = enabled && !!$82("[data-v82-required]", row)?.checked;
+          out[key] = { enabled, required };
+        });
+        return out;
+      }
+
+      async function loadFormSettings82() {
+        ensureFormPanel82();
+
+        try {
+          const data = await api82("/api/admin/settings");
+          const enabled = data?.form_enabled !== false;
+          const fields = data?.form_fields || data?.formFields || {};
+
+          renderFormFields82(fields);
+
+          const status = $82("#v82FormStatus");
+          const toggle = $82("#v82FormToggle");
+
+          if (status) {
+            status.textContent = enabled
+              ? "Enabled / 已开启"
+              : "Disabled / 已关闭";
+          }
+
+          if (toggle) {
+            toggle.textContent = enabled
+              ? "Disable form / 关闭表单"
+              : "Enable form / 开启表单";
+            toggle.dataset.enabled = String(enabled);
+          }
+        } catch (err) {
+          console.error(err);
+          const status = $82("#v82FormStatus");
+          if (status) status.textContent = "API error / API 错误";
+          toast82(err.message || "Form settings failed");
+        }
+      }
+
+      async function saveFormSettings82() {
+        const toggle = $82("#v82FormToggle");
+        const enabled = toggle?.dataset.enabled !== "false";
+        const fields = collectFormFields82();
+
+        try {
+          if (toggle) toggle.disabled = true;
+          const saved = await api82("/api/admin/settings", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+              form_enabled: enabled,
+              form_fields: fields
+            })
+          });
+
+          const config = saved?.config || saved;
+          const actual = config?.form_enabled !== false;
+          if (toggle) {
+            toggle.dataset.enabled = String(actual);
+            toggle.textContent = actual
+              ? "Disable form / 关闭表单"
+              : "Enable form / 开启表单";
+          }
+
+          const status = $82("#v82FormStatus");
+          if (status) status.textContent = actual
+            ? "Enabled / 已开启"
+            : "Disabled / 已关闭";
+
+          toast82("Form settings saved / 表单设置已保存");
+
+          if (typeof load === "function") await load();
+        } catch (err) {
+          console.error(err);
+          toast82(err.message || "Save failed / 保存失败");
+        } finally {
+          if (toggle) toggle.disabled = false;
+        }
+      }
+
+      async function toggleForm82() {
+        const toggle = $82("#v82FormToggle");
+        if (!toggle) return;
+
+        const current = toggle.dataset.enabled === "true";
+        const fields = collectFormFields82();
+
+        try {
+          toggle.disabled = true;
+
+          const saved = await api82("/api/admin/settings", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+              form_enabled: !current,
+              form_fields: fields
+            })
+          });
+
+          const config = saved?.config || saved;
+          const actual = config?.form_enabled !== false;
+
+          toggle.dataset.enabled = String(actual);
+          toggle.textContent = actual
+            ? "Disable form / 关闭表单"
+            : "Enable form / 开启表单";
+
+          const status = $82("#v82FormStatus");
+          if (status) status.textContent = actual
+            ? "Enabled / 已开启"
+            : "Disabled / 已关闭";
+
+          toast82(
+            actual
+              ? "Form enabled / 表单已开启"
+              : "Form disabled / 表单已关闭"
+          );
+
+          if (typeof load === "function") await load();
+        } catch (err) {
+          console.error(err);
+          toast82(err.message || "Toggle failed / 操作失败");
+        } finally {
+          toggle.disabled = false;
+        }
+      }
+
+      function ensureLeadControls82() {
+        const leads = $82("#leads");
+        if (!leads || $82("#v82LeadControls")) return;
+
+        const controls = document.createElement("div");
+        controls.id = "v82LeadControls";
+        controls.className = "card";
+        controls.style.marginBottom = "16px";
+        controls.innerHTML = `
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <input id="v82LeadSearch"
+          placeholder="Search name, WhatsApp, email, company / 搜索"
+          style="flex:1;min-width:220px">
+        <select id="v82LeadStatusFilter" style="min-width:150px">
+          <option value="">All statuses / 全部状态</option>
+          <option value="new">New / 新询盘</option>
+          <option value="contacted">Contacted / 已联系</option>
+          <option value="qualified">Qualified / 已筛选</option>
+          <option value="won">Won / 已成交</option>
+          <option value="lost">Lost / 已失效</option>
+        </select>
+        <button type="button" id="v82LeadRefresh" class="btn secondary">
+          Refresh / 刷新
+        </button>
+      </div>
+    `;
+
+        const first = leads.querySelector(".notice,.sectionhead,.card");
+        if (first) first.before(controls);
+        else leads.prepend(controls);
+
+        $82("#v82LeadSearch").addEventListener("input", renderLeads82);
+        $82("#v82LeadStatusFilter").addEventListener("change", renderLeads82);
+        $82("#v82LeadRefresh").addEventListener("click", loadLeads82);
+      }
+
+      function leadValue82(lead, keys) {
+        for (const key of keys) {
+          if (lead?.[key] !== undefined && lead?.[key] !== null && String(lead[key]).trim() !== "") {
+            return lead[key];
+          }
+        }
+        return "";
+      }
+
+      function renderLeads82() {
+        const rows = $82("#leadRows");
+        if (!rows) return;
+
+        const search = String($82("#v82LeadSearch")?.value || "").trim().toLowerCase();
+        const status = String($82("#v82LeadStatusFilter")?.value || "");
+
+        const filtered = (Array.isArray(state.leads) ? state.leads : []).filter(lead => {
+          const currentStatus = String(lead.status || "new").toLowerCase();
+          if (status && currentStatus !== status) return false;
+          if (!search) return true;
+
+          const haystack = [
+            lead.name,
+            lead.full_name,
+            lead.phone,
+            lead.whatsapp,
+            lead.email,
+            lead.company,
+            lead.country,
+            lead.message,
+            lead.campaign,
+            lead.utm_campaign,
+            lead.source,
+            lead.utm_source
+          ].map(x => String(x || "").toLowerCase()).join(" ");
+
+          return haystack.includes(search);
+        });
+
+        rows.innerHTML = filtered.map((x, i) => {
+          const realIndex = state.leads.indexOf(x);
+          const name = leadValue82(x, ["name", "full_name"]);
+          const contact = leadValue82(x, ["whatsapp", "phone", "email", "contact"]);
+          const campaign = leadValue82(x, ["campaign", "utm_campaign"]);
+          const currentStatus = String(x.status || "new").toLowerCase();
+          const labels = STATUS_LABELS_82[currentStatus] || [currentStatus, currentStatus];
+
+          return `
+        <tr>
+          <td>${esc82(time(x.created_at || x.createdAt))}</td>
+          <td>${esc82(name || "—")}</td>
+          <td>${esc82(contact || "—")}</td>
+          <td>${esc82(campaign || "—")}</td>
+          <td><span class="badge">${esc82(labels[0])} / ${esc82(labels[1])}</span></td>
+          <td>
+            <button class="btn secondary" type="button"
+              data-v82-view-lead="${realIndex}">
+              View / 查看
+            </button>
+          </td>
+        </tr>
+      `;
+        }).join("") || '<tr><td colspan="6" class="empty">No matching leads / 没有匹配的询盘。</td></tr>';
+
+        const total = state.leads.length;
+        const statuses = state.leads.map(x => String(x.status || "new").toLowerCase());
+        if ($82("#leadTotal")) $82("#leadTotal").textContent = fmt(total);
+        if ($82("#leadNew")) $82("#leadNew").textContent = statuses.filter(x => x === "new").length;
+        if ($82("#leadContacted")) $82("#leadContacted").textContent = statuses.filter(x => x === "contacted").length;
+        if ($82("#leadWon")) $82("#leadWon").textContent = statuses.filter(x => x === "won").length;
+      }
+
+      async function loadLeads82() {
+        ensureLeadControls82();
+
+        const rows = $82("#leadRows");
+        if (rows) rows.innerHTML = '<tr><td colspan="6" class="empty">Loading… / 加载中…</td></tr>';
+
+        try {
+          const data = await api82("/api/admin/leads?limit=500");
+          state.leads = Array.isArray(data)
+            ? data
+            : (data?.leads || data?.items || data?.data || []);
+
+          renderLeads82();
+        } catch (err) {
+          console.error(err);
+          if (rows) rows.innerHTML =
+            '<tr><td colspan="6" class="empty">Lead API unavailable / 询盘 API 暂不可用。</td></tr>';
+          toast82(err.message || "Lead API unavailable");
+        }
+      }
+
+      function showLead82(index) {
+        const lead = state.leads[index];
+        if (!lead) return;
+
+        const modal = $82("#leadModal");
+        const detail = $82("#leadDetail");
+        if (!modal || !detail) return;
+
+        const status = String(lead.status || "new").toLowerCase();
+
+        detail.innerHTML = `
+      <div class="v82-lead-edit">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div>
+            <label>Name / 姓名</label>
+            <div class="muted">${esc82(leadValue82(lead, ["name", "full_name"]) || "—")}</div>
+          </div>
+          <div>
+            <label>WhatsApp</label>
+            <div class="muted">${esc82(leadValue82(lead, ["whatsapp", "phone"]) || "—")}</div>
+          </div>
+          <div>
+            <label>Email / 邮箱</label>
+            <div class="muted">${esc82(lead.email || "—")}</div>
+          </div>
+          <div>
+            <label>Country / 国家</label>
+            <div class="muted">${esc82(lead.country || lead.utm_country || "—")}</div>
+          </div>
+          <div>
+            <label>Company / 公司</label>
+            <div class="muted">${esc82(lead.company || "—")}</div>
+          </div>
+          <div>
+            <label>Created / 时间</label>
+            <div class="muted">${esc82(time(lead.created_at || lead.createdAt))}</div>
+          </div>
+        </div>
+
+        <div style="margin-top:16px">
+          <label>Status / 状态</label>
+          <select id="v82LeadStatus" style="width:100%;padding:10px;margin-top:6px">
+            ${Object.keys(STATUS_LABELS_82).map(s =>
+          `<option value="${s}" ${s === status ? "selected" : ""}>
+                ${esc82(STATUS_LABELS_82[s][0])} / ${esc82(STATUS_LABELS_82[s][1])}
+              </option>`
+        ).join("")}
+          </select>
+        </div>
+
+        <div style="margin-top:16px">
+          <label>Notes / 备注</label>
+          <textarea id="v82LeadNotes"
+            style="width:100%;min-height:110px;box-sizing:border-box;margin-top:6px"
+            placeholder="Internal notes / 内部备注">${esc82(lead.notes || "")}</textarea>
+        </div>
+
+        <div style="margin-top:16px;display:flex;justify-content:flex-end;gap:8px">
+          <button type="button" class="btn primary" id="v82SaveLead">
+            Save / 保存
+          </button>
+        </div>
+      </div>
+    `;
+
+        $82("#v82SaveLead").addEventListener("click", () => saveLead82(index));
+        modal.classList.add("open");
+      }
+
+      async function saveLead82(index) {
+        const lead = state.leads[index];
+        if (!lead) return;
+
+        const status = $82("#v82LeadStatus")?.value || "new";
+        const notes = $82("#v82LeadNotes")?.value || "";
+
+        try {
+          const saved = await api82(
+            `/api/admin/leads/${encodeURIComponent(String(lead.id))}`,
+            {
+              method: "PATCH",
+              headers: { "content-type": "application/json" },
+              body: JSON.stringify({ status, notes })
+            }
+          );
+
+          state.leads[index] = saved || { ...lead, status, notes };
+          renderLeads82();
+
+          toast82("Lead saved / 询盘已保存");
+          $82("#leadModal")?.classList.remove("open");
+        } catch (err) {
+          console.error(err);
+          toast82(err.message || "Lead save failed / 保存失败");
+        }
+      }
+
+      /* Dynamic lead view buttons */
+      document.addEventListener("click", event => {
+        const button = event.target.closest("[data-v82-view-lead]");
+        if (!button) return;
+        showLead82(Number(button.dataset.v82ViewLead));
+      });
+
+      /* Settings */
+      ensureFormPanel82();
+      $82("#v82FormToggle")?.addEventListener("click", toggleForm82);
+      $82("#v82SaveForm")?.addEventListener("click", saveFormSettings82);
+
+      /* Override V8 lead loader safely. */
+      try { window.loadLeads = loadLeads82; } catch (_) { }
+
+      /* Load once now. */
+      loadFormSettings82();
+      loadLeads82();
+
+      /* Re-load when user opens the Leads/Settings pages. */
+      document.addEventListener("click", event => {
+        const link = event.target.closest("[data-page-link],.nav button[data-page]");
+        if (!link) return;
+        const page = link.dataset.pageLink || link.dataset.page;
+        if (page === "leads") setTimeout(loadLeads82, 50);
+        if (page === "settings") setTimeout(loadFormSettings82, 50);
+      });
+
+    })();
+  </script>
+  <!-- SULAN PUBLIC V8.2
+     Public lead-form runtime control
+     Paste this block BEFORE </body> in public/index.html.
+     Do NOT remove the existing form/pixel code.
+-->
+  <script>
+    (function () {
+      "use strict";
+
+      const FORM_SELECTOR_83 = "[data-lead-form],#leadForm";
+
+      function applyConfig83(config) {
+        const forms = [...document.querySelectorAll(FORM_SELECTOR_83)];
+        if (!forms.length) return;
+
+        const enabled = config?.form_enabled !== false;
+        const fields = config?.form_fields || config?.formFields || {};
+
+        forms.forEach(form => {
+          if (!enabled) {
+            form.style.display = "none";
+            form.setAttribute("data-sulan-form-disabled", "true");
+            return;
+          }
+
+          if (form.getAttribute("data-sulan-form-disabled") === "true") {
+            form.style.display = "";
+            form.removeAttribute("data-sulan-form-disabled");
+          }
+
+          Object.keys(fields).forEach(name => {
+            const setting = fields[name];
+            if (!setting || typeof setting !== "object") return;
+
+            const controls = form.querySelectorAll(
+              `[name="${CSS.escape(name)}"],#${CSS.escape(name)}`
+            );
+
+            controls.forEach(control => {
+              const wrapper =
+                control.closest(".field,.form-field,.form-group,.input-group,label") ||
+                control.parentElement;
+
+              if (setting.enabled === false) {
+                if (wrapper) wrapper.style.display = "none";
+                control.disabled = true;
+                control.removeAttribute("required");
+                control.setAttribute("data-sulan-field-disabled", "true");
+              } else {
+                if (control.getAttribute("data-sulan-field-disabled") === "true") {
+                  control.disabled = false;
+                  control.removeAttribute("data-sulan-field-disabled");
+                }
+                if (wrapper && wrapper.style.display === "none") wrapper.style.display = "";
+                if (setting.required === true) control.required = true;
+                else control.removeAttribute("required");
+              }
+            });
+          });
+        });
+      }
+
+      async function boot83() {
+        try {
+          const response = await fetch("/api/public/config", {
+            method: "GET",
+            cache: "no-store"
+          });
+
+          if (!response.ok) return;
+
+          const config = await response.json();
+          applyConfig83(config);
+
+          /* Protect against forms injected after initial page load. */
+          const observer = new MutationObserver(() => applyConfig83(config));
+          observer.observe(document.documentElement, {
+            childList: true,
+            subtree: true
+          });
+
+          /* Keep the server-side form switch authoritative. */
+          document.addEventListener("submit", event => {
+            const form = event.target;
+            if (!form || !form.matches || !form.matches(FORM_SELECTOR_83)) return;
+
+            if (config.form_enabled === false) {
+              event.preventDefault();
+              event.stopImmediatePropagation();
+              alert("The inquiry form is currently disabled.");
+            }
+          }, true);
+        } catch (_) { }
+      }
+
+      if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", boot83, { once: true });
+      } else {
+        boot83();
+      }
+    })();
+  </script>
+
 </body>
 
 </html>
