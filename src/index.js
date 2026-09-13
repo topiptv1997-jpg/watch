@@ -134,9 +134,33 @@ export default {
 
         /* ---------- 5. 静态资源兜底 ---------- */
         // 访问 /、/admin/、/assets/xxx 等都会走这里
-        if (env.ASSETS) {
-            return env.ASSETS.fetch(request);
-        }
+/* ---------- 静态资源兜底（含目录重定向） ---------- */
+if (env.ASSETS) {
+  // 1. 如果路径不带斜杠、无扩展名、不是根路径
+  //    尝试访问 /admin/ 看是否有 index.html
+  if (
+    !url.pathname.endsWith('/') &&
+    !url.pathname.includes('.') &&
+    url.pathname !== '/'
+  ) {
+    const tryUrl = new URL(url);
+    tryUrl.pathname = url.pathname + '/';
+
+    const test = await env.ASSETS.fetch(
+      new Request(tryUrl.toString(), request)
+    );
+
+    if (test.status === 200) {
+      // 目录存在 → 301 重定向到带斜杠的路径
+      return Response.redirect(tryUrl.toString(), 301);
+    }
+  }
+
+  // 2. 正常静态资源
+  return env.ASSETS.fetch(request);
+}
+
+return new Response('Not found', { status: 404 });
 
         return new Response('Not found', { status: 404 });
     }
