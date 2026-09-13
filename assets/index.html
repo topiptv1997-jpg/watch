@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport"
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="format-detection" content="telephone=no">
+  <meta name="theme-color" content="#ffffff">
+  <!-- 基础 SEO -->
+  <title>KingJoWatch</title>
+  <meta name="keywords" content="watch">
+
+  <!-- Open Graph 分享信息 -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="KingJoWatch">
+  <meta property="og:image" content="http://page.qun366.com/uploads/20260913_ee56cf2b57e3.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="KingJoWatch">
+  <meta name="twitter:image" content="http://page.qun366.com/uploads/20260913_ee56cf2b57e3.png">
+  <link rel="icon" type="image/png" href="assets/favicon.png">
+  <link rel="apple-touch-icon" href="assets/favicon.png">
+  <link rel="stylesheet" href="h5.css?v=1789041992">
+  <style>
+    img[data-width-mode="full"] {
+      width: 100% !important;
+      height: auto !important;
+      max-width: 100%;
+      display: block;
+    }
+
+    img[data-width-mode="auto"] {
+      width: auto !important;
+      height: auto !important;
+      max-width: 100%;
+      display: block;
+    }
+
+    img[data-width-mode="custom"] {
+      height: auto !important;
+      max-width: 100%;
+      display: block;
+    }
+
+    img[data-align="left"] {
+      margin-left: 0 !important;
+      margin-right: auto !important;
+    }
+
+    img[data-align="center"] {
+      margin-left: auto !important;
+      margin-right: auto !important;
+    }
+
+    img[data-align="right"] {
+      margin-left: auto !important;
+      margin-right: 0 !important;
+    }
+
+    .sp-hero img,
+    .sp-cover>img,
+    .sp-swiper-item img {
+      width: 100% !important;
+      height: auto !important;
+      max-width: 100%;
+      display: block;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="sp-container">
+    <div class="sp-content">
+      <p><a class="sp-float-btn sp-float-btn--middle" style="width: 50px; height: 50px; right: 12px;"
+          href="https://wa.me/8618603024764" target="_blank" rel="noopener" data-position-value="50%"><img
+            src="assets/img/20260913_4eb7e6a503f9.png" alt="" data-width-mode="full"><img
+            src="assets/img/20260911_6047d6019e19.png" alt="" data-width-mode="full"> <img
+            src="assets/img/20260911_6047d6019e19.png" alt="客服" data-width-mode="full"></a></p>
+      <div class="sp-list-item"
+        style="text-align: center; position: fixed; top: 0; left: 0; right: 0; z-index: 100; background: #fff;">
+        <strong><span class="label">KINGJOWATCH</span></strong>
+      </div>
+      <p><img src="assets/img/20260910_326aba3b43a9.jpg" alt="" data-width-mode="full"><img
+          src="assets/img/20260910_cde612ee948a.jpg" alt="" data-width-mode="full"><img
+          src="assets/img/20260910_52739b4dad63.jpg" alt="" data-width-mode="full"><img
+          src="assets/img/20260910_2790271e76e2.jpg" alt="" data-width-mode="full"><img
+          src="assets/img/20260910_4234d8d2cf99.jpg" alt="" data-width-mode="full"><img
+          src="assets/img/20260910_8cfaa98b5fab.jpg" alt="" data-width-mode="full"><a title="baidu"
+          href="http://www.baidu.com" target="_blank" rel="noopener"><img src="assets/img/20260910_e543f8e494a5.jpg"
+            alt="" data-width-mode="full"></a></p>
+      <p>&nbsp;</p>
+      <div class="sp-list">
+        <div class="sp-list-item" style="text-align: center;">&copy;2011-2026 版权所有</div>
+      </div>
+    </div>
+  </div>
+  <script src="h5.js?v=1789032528"></script>
+  <!-- 【核心修改】：前台展示页与云端 KV 数据库完美联动脚本 -->
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      try {
+        // 1. 从公开网关接口拉取最新的云端 KV 配置大盘
+        const response = await fetch('/api/get-public-data');
+        if (!response.ok) return console.error('读取云端配置大盘失败:', response.status);
+
+        const cloudConfig = await response.json();
+        // 严格对齐后台的字段名称（全小写与驼峰）
+        const numbersPool = cloudConfig.whatsappNumbers || [];
+        const routingMode = cloudConfig.routingMode || "Single";
+
+        // 本地安全兜底默认号码（如果后台未配置或被删空，自动激活此号码防死锁）
+        let targetWhatsAppNumber = "8618603024764";
+
+        // 2. 匹配你在后台切换的选择，动态计算分流
+        if (Array.isArray(numbersPool) && numbersPool.length > 0) {
+          if (routingMode === "Single") {
+            // 模式 A：固定使用后台号码池里的第 1 个号码
+            targetWhatsAppNumber = numbersPool[0].number;
+          } else if (routingMode === "Round Robin") {
+            // 模式 B：多号码高精准均等轮询分流
+            const randomIndex = Math.floor(Math.random() * numbersPool.length);
+            targetWhatsAppNumber = numbersPool[randomIndex].number;
+          }
+        }
+
+        // 过滤清洗号码，防止后台误输入空格、加号、括号，确保生成标准的 wa.me 链接
+        targetWhatsAppNumber = String(targetWhatsAppNumber).replace(/[\s\+\-\(\)]/g, '');
+
+        // 3. 【核心替换】：精准捕获前台所有指向你原本死链接的 A 标签，全量把号码更新为云端变量值
+        const allLinks = document.querySelectorAll('a[href*="wa.me"]');
+        allLinks.forEach(link => {
+          // 安全生成带斜杠的国际标准链接
+          link.setAttribute('href', `https://wa.me/${targetWhatsAppNumber}/`);
+        });
+
+        console.log(`[KV Linker] 联动成功！当前用户已被分流分配至客服号码: ${targetWhatsAppNumber}`);
+
+      } catch (err) {
+        console.error('[KV Linker] 前后台通信故障，已自动激活防死锁本地号码兜底机制:', err);
+      }
+    });
+  </script>
+
+  <!-- 【广告追踪】：动态注入你在后台配置的 Meta 与 TikTok 多像素追踪代码 -->
+  <!-- 【广告追踪】：动态注入你在后台配置的 Meta 与 TikTok 多像素追踪代码 -->
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      try {
+        // 再次安全读取一次接口，确保独立解析像素大盘
+        const res = await fetch('/api/get-public-data');
+        if (!res.ok) return;
+        const config = await res.json();
+
+        // ==================== A. 动态注入 Meta (Facebook) Pixels ====================
+        const metaPixels = config.metaPixels || [];
+        if (metaPixels.length > 0) {
+          // 1. 初始化标准基础 Meta 像素环境代码
+          !function (f, b, e, v, n, t, s) {
+            if (f.fbq) return; n = f.fbq = function () {
+              n.callMethod ?
+                n.callMethod.apply(n, arguments) : n.queue.push(arguments)
+            }; if (!f._fbq) f._fbq = n;
+            n.push = n; n.loaded = !0; n.version = '2.0'; n.queue = []; t = b.createElement(e); t.async = !0;
+            t.src = v; s = b.getElementsByTagName(e); s.parentNode.insertBefore(t, s)
+          }(window,
+            document, 'script', 'https://facebook.net');
+
+          // 2. 遍历你在后台添加的所有 Meta 像素 ID，全量在前端进行初始化和基础 PageView 激活
+          metaPixels.forEach(pixel => {
+            if (pixel.id) {
+              fbq('init', pixel.id.trim());
+              fbq('track', 'PageView');
+              console.log(`[广告追踪] Meta Pixel 成功注入并激活: ${pixel.name} (${pixel.id})`);
+            }
+          });
+        }
+
+        // ==================== B. 动态注入 TikTok Pixels ====================
+        const tiktokPixels = config.tiktokPixels || [];
+        if (tiktokPixels.length > 0) {
+          // 1. 初始化标准基础 TikTok 像素环境代码
+          !function (w, d, t) { w.TiktokAnalyticsObject = t; var ttq = w[t] = w[t] || []; ttq.methods = ["page", "track", "identify", "instances", "debug", "on", "off", "once", "ready", "alias", "group", "enableCookie", "disableCookie", "holdConsent", "revokeConsent", "grantConsent"], ttq.setAndDefer = function (t, e) { t[e] = function () { t.push([e].concat(Array.prototype.slice.call(arguments, 0))) } }; for (var i = 0; i < ttq.methods.length; i++)ttq.setAndDefer(ttq, ttq.methods[i]); ttq.instance = function (t) { for (var e = ttq[t] || [], n = 0; n < ttq.methods.length; n++)ttq.setAndDefer(e, ttq.methods[n]); return e }, ttq.load = function (e, n) { var o = "https://tiktok.com", r = d.getElementsByTagName("script"); w.TiktokAnalyticsObjectApp = e, w.TiktokAnalyticsObjectAppId = n, w.TiktokAnalyticsObjectAppReady = w.TiktokAnalyticsObjectAppReady || []; var a = d.createElement("script"); a.type = "text/javascript", a.async = !0, a.src = o; var c = r.parentNode; c.insertBefore(a, r) }; }(window, document, 'ttq');
+
+          // 2. 遍历你在后台添加的所有 TikTok 像素 ID，全量加载并触发首屏追踪
+          tiktokPixels.forEach(pixel => {
+            if (pixel.id) {
+              ttq.load(pixel.id.trim());
+              ttq.page();
+              console.log(`[广告追踪] TikTok Pixel 成功注入并激活: ${pixel.name} (${pixel.id})`);
+            }
+          });
+        }
+
+      } catch (e) {
+        console.error('[广告追踪] 动态像素追踪引擎加载异常:', e);
+      }
+    });
+  </script>
+
+
+
+</body>
+
+</html>
