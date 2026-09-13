@@ -9,5 +9,5 @@ binding = "ASSETS"
 
 # KV 绑定
 [[kv_namespaces]]
-binding = "watch"
+binding = "DATA_KV"
 id = "ea6c3cbc73b441968b0db08769f90a0f"
