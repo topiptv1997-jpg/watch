@@ -173,23 +173,49 @@
         }
 
         // ==================== B. 动态注入 TikTok Pixels ====================
+                // ==================== B. 动态注入 TikTok Pixels ====================
         const tiktokPixels = config.tiktokPixels || [];
         if (tiktokPixels.length > 0) {
-          // 1. 初始化标准基础 TikTok 像素环境代码
-          !function (w, d, t) { w.TiktokAnalyticsObject = t; var ttq = w[t] = w[t] || []; ttq.methods = ["page", "track", "identify", "instances", "debug", "on", "off", "once", "ready", "alias", "group", "enableCookie", "disableCookie", "holdConsent", "revokeConsent", "grantConsent"], ttq.setAndDefer = function (t, e) { t[e] = function () { t.push([e].concat(Array.prototype.slice.call(arguments, 0))) } }; for (var i = 0; i < ttq.methods.length; i++)ttq.setAndDefer(ttq, ttq.methods[i]); ttq.instance = function (t) { for (var e = ttq[t] || [], n = 0; n < ttq.methods.length; n++)ttq.setAndDefer(e, ttq.methods[n]); return e }, ttq.load = function (e, n) { var o = "https://tiktok.com", r = d.getElementsByTagName("script"); w.TiktokAnalyticsObjectApp = e, w.TiktokAnalyticsObjectAppId = n, w.TiktokAnalyticsObjectAppReady = w.TiktokAnalyticsObjectAppReady || []; var a = d.createElement("script"); a.type = "text/javascript", a.async = !0, a.src = o; var c = r.parentNode; c.insertBefore(a, r) }; }(window, document, 'ttq');
+          // 1. 【已修复】官方标准 TikTok 像素环境基础库
+          !function (w, d, t) {
+            w.TiktokAnalyticsObject = t;
+            var ttq = w[t] = w[t] || [];
+            ttq.methods = ["page", "track", "identify", "instances", "debug", "on", "off", "once", "ready", "alias", "group", "enableCookie", "disableCookie", "holdConsent", "revokeConsent", "grantConsent"];
+            ttq.setAndDefer = function (t, e) { t[e] = function () { t.push([e].concat(Array.prototype.slice.call(arguments, 0))) } };
+            for (var i = 0; i < ttq.methods.length; i++) ttq.setAndDefer(ttq, ttq.methods[i]);
+            ttq.instance = function (t) { for (var e = ttq[t] || [], n = 0; n < ttq.methods.length; n++) ttq.setAndDefer(e, ttq.methods[n]); return e };
 
-          // 2. 遍历你在后台添加的所有 TikTok 像素 ID，全量加载并触发首屏追踪
+            // 👇 修复了原代码中错误的 Dom 节点查找逻辑，对齐 TikTok 官方原版标准规范
+            ttq.load = function (e, n) {
+              var r = "https://tiktok.com", o = n && n.partner;
+              ttq._i = ttq._i || {}, ttq._i[e] = [], ttq._i[e]._u = r, ttq._t = ttq._t || {}, ttq._t[e] = +new Date, ttq._o = ttq._o || {}, ttq._o[e] = n || {};
+              var a = d.createElement("script");
+              a.type = "text/javascript", a.async = !0, a.src = r + "?sdkid=" + e + "&lib=" + t;
+              var firstScript = d.getElementsByTagName("script")[0]; // 获取具体的第一个 script 节点
+              if (firstScript && firstScript.parentNode) {
+                firstScript.parentNode.insertBefore(a, firstScript); // 安全插入
+              } else {
+                d.head.appendChild(a); // 备用方案：若找不到任何 script，直接追加到 head 尾部
+              }
+            };
+          }(window, document, 'ttq');
+
+          // 2. 🔄 遍历你在后台添加的所有 TikTok 像素 ID，批量挂载/注册
           tiktokPixels.forEach(pixel => {
             if (pixel.id) {
               ttq.load(pixel.id.trim());
-              ttq.page();
-              window.ttq.track('Contact', {
-                content_name: '联系页成功'
-              });
-              console.log(`[广告追踪] TikTok Pixel 成功注入并激活: ${pixel.name} (${pixel.id})`);
+              console.log(`[广告追踪] TikTok Pixel 成功挂载: ${pixel.name} (${pixel.id})`);
             }
           });
+
+          // 3. 🎯 【关键修改】在循环外部统一触发！每个 ID 精准触发一次，绝不翻倍虚增
+          ttq.page();
+          ttq.track('Contact', {
+            content_name: '联系表单成功'
+          });
+          console.log(`[广告追踪] 所有已加载的 TikTok Pixel 已成功统一触发首屏及 Contact 事件`);
         }
+
 
       } catch (e) {
         console.error('[广告追踪] 动态像素追踪引擎加载异常:', e);
