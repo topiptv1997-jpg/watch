@@ -14,10 +14,8 @@
   <!-- Open Graph 分享信息 -->
   <meta property="og:type" content="website">
   <meta property="og:title" content="KingJoWatch">
-  <meta property="og:image" content="http://page.qun366.com/uploads/20260913_ee56cf2b57e3.png">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="KingJoWatch">
-  <meta name="twitter:image" content="http://page.qun366.com/uploads/20260913_ee56cf2b57e3.png">
   <link rel="icon" type="image/png" href="assets/favicon.png">
   <link rel="apple-touch-icon" href="assets/favicon.png">
   <link rel="stylesheet" href="h5.css?v=1789041992">
@@ -85,7 +83,7 @@
           src="assets/img/20260910_52739b4dad63.jpg" alt="" data-width-mode="full"><img
           src="assets/img/20260910_2790271e76e2.jpg" alt="" data-width-mode="full"><img
           src="assets/img/20260910_4234d8d2cf99.jpg" alt="" data-width-mode="full"><img
-          src="assets/img/20260910_8cfaa98b5fab.jpg" alt="" data-width-mode="full"><img 
+          src="assets/img/20260910_8cfaa98b5fab.jpg" alt="" data-width-mode="full"><img
           src="assets/img/20260910_e543f8e494a5.jpg" alt="" data-width-mode="full"></a></p>
       <p>&nbsp;</p>
       <div class="sp-list">
@@ -185,6 +183,9 @@
             if (pixel.id) {
               ttq.load(pixel.id.trim());
               ttq.page();
+              window.ttq.track('Contact', {
+                content_name: '联系页成功'
+              });
               console.log(`[广告追踪] TikTok Pixel 成功注入并激活: ${pixel.name} (${pixel.id})`);
             }
           });
