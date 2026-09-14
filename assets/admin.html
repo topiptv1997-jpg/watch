@@ -167,32 +167,37 @@
         }
 
         // 首屏动态拉取数据回填
+        // 找到这一段：
         document.addEventListener('DOMContentLoaded', async () => {
             try {
                 const response = await fetch('/api/get-public-data');
                 if (response.ok) {
                     const cloudData = await response.json();
-                    localState = Object.assign(localState, cloudData);
                     
-                    document.getElementById('siteTitle').value = localState.siteTitle || "";
-                    document.getElementById('siteNotice').value = localState.siteNotice || "";
+                    // 【核心修改】：原代码 localState = Object.assign(localState, cloudData); 在空数据库下会崩溃
+                    // 修改为下方带有安全判断的写法，如果是新空间空数据库，则使用本地空模板兜底
+                    if (cloudData && typeof cloudData === 'object' && !Array.isArray(cloudData) && Object.keys(cloudData).length > 0) {
+                        localState = Object.assign(localState, cloudData);
+                    }
+                    
+                    document.getElementById('siteTitle').value = localState.siteTitle || "SULAN PEPTIDE";
+                    document.getElementById('siteNotice').value = localState.siteNotice || "系统正常运行";
                     document.getElementById('formEnabled').checked = localState.formEnabled !== false;
                     
                     const radioBtn = document.querySelector(`input[name="routingMode"][value="${localState.routingMode || 'Single'}"]`);
                     if(radioBtn) radioBtn.checked = true;
                     
-                    // 绑定输入框与单选复选框的事件监听，实现失焦/改变即刻自动无感保存
                     document.getElementById('siteTitle').addEventListener('blur', autoSaveToCloud);
                     document.getElementById('siteNotice').addEventListener('blur', autoSaveToCloud);
                     document.getElementById('formEnabled').addEventListener('change', autoSaveToCloud);
                     document.querySelectorAll('input[name="routingMode"]').forEach(radio => {
                         radio.addEventListener('change', autoSaveToCloud);
                     });
-                    
                     renderAllTables();
                 }
-            } catch (err) { console.error("从远程 KV 状态加载失败:", err); }
+            } catch (err) { console.error("新空间 KV 状态加载失败，已启用本地配置兜底:", err); renderAllTables(); }
         });
+
 
         // 动态表格绘制逻辑
         function renderAllTables() {
