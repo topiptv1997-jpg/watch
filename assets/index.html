@@ -175,6 +175,7 @@
         // ==================== B. 动态注入 TikTok Pixels ====================
                 // ==================== B. 动态注入 TikTok Pixels ====================
         const tiktokPixels = config.tiktokPixels || [];
+         console.log(`${tiktokPixels}`)
         if (tiktokPixels.length > 0) {
           // 1. 【已修复】官方标准 TikTok 像素环境基础库
           !function (w, d, t) {
