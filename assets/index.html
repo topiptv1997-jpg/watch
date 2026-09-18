@@ -167,6 +167,7 @@
             if (pixel.id) {
               fbq('init', pixel.id.trim());
               fbq('track', 'PageView');
+              fbq('track', 'Contact', { type: 'WhatsApp' });
               console.log(`[广告追踪] Meta Pixel 成功注入并激活: ${pixel.name} (${pixel.id})`);
             }
           });
