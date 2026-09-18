@@ -152,15 +152,16 @@
         const metaPixels = config.metaPixels || [];
         if (metaPixels.length > 0) {
           // 1. 初始化标准基础 Meta 像素环境代码
-          !function (f, b, e, v, n, t, s) {
-            if (f.fbq) return; n = f.fbq = function () {
-              n.callMethod ?
-                n.callMethod.apply(n, arguments) : n.queue.push(arguments)
-            }; if (!f._fbq) f._fbq = n;
-            n.push = n; n.loaded = !0; n.version = '2.0'; n.queue = []; t = b.createElement(e); t.async = !0;
-            t.src = v; s = b.getElementsByTagName(e); s.parentNode.insertBefore(t, s)
-          }(window,
-            document, 'script', 'https://facebook.net');
+// 1. 初始化标准基础 Meta 像素环境代码
+!function (f, b, e, v, n, t, s) {
+  if (f.fbq) return; n = f.fbq = function () {
+    n.callMethod ?
+      n.callMethod.apply(n, arguments) : n.queue.push(arguments)
+  }; if (!f._fbq) f._fbq = n;
+  n.push = n; n.loaded = !0; n.version = '2.0'; n.queue = []; t = b.createElement(e); t.async = !0;
+  t.src = v; s = b.getElementsByTagName(e)[0]; s.parentNode.insertBefore(t, s)
+}(window,
+  document, 'script', 'https://connect.facebook.net/en_US/fbevents.js');
 
           // 2. 遍历你在后台添加的所有 Meta 像素 ID，全量在前端进行初始化和基础 PageView 激活
           metaPixels.forEach(pixel => {
@@ -188,18 +189,18 @@
             ttq.instance = function (t) { for (var e = ttq[t] || [], n = 0; n < ttq.methods.length; n++) ttq.setAndDefer(e, ttq.methods[n]); return e };
 
             // 👇 修复了原代码中错误的 Dom 节点查找逻辑，对齐 TikTok 官方原版标准规范
-            ttq.load = function (e, n) {
-              var r = "https://tiktok.com", o = n && n.partner;
-              ttq._i = ttq._i || {}, ttq._i[e] = [], ttq._i[e]._u = r, ttq._t = ttq._t || {}, ttq._t[e] = +new Date, ttq._o = ttq._o || {}, ttq._o[e] = n || {};
-              var a = d.createElement("script");
-              a.type = "text/javascript", a.async = !0, a.src = r + "?sdkid=" + e + "&lib=" + t;
-              var firstScript = d.getElementsByTagName("script")[0]; // 获取具体的第一个 script 节点
-              if (firstScript && firstScript.parentNode) {
-                firstScript.parentNode.insertBefore(a, firstScript); // 安全插入
-              } else {
-                d.head.appendChild(a); // 备用方案：若找不到任何 script，直接追加到 head 尾部
-              }
-            };
+ttq.load = function (e, n) {
+  var r = "https://analytics.tiktok.com/i18n/pixel/events.js", o = n && n.partner;
+  ttq._i = ttq._i || {}, ttq._i[e] = [], ttq._i[e]._u = r, ttq._t = ttq._t || {}, ttq._t[e] = +new Date, ttq._o = ttq._o || {}, ttq._o[e] = n || {};
+  var a = d.createElement("script");
+  a.type = "text/javascript", a.async = !0, a.src = r + "?sdkid=" + e + "&lib=" + t;
+  var firstScript = d.getElementsByTagName("script")[0];
+  if (firstScript && firstScript.parentNode) {
+    firstScript.parentNode.insertBefore(a, firstScript);
+  } else {
+    d.head.appendChild(a);
+  }
+};
           }(window, document, 'ttq');
 
           // 2. 🔄 遍历你在后台添加的所有 TikTok 像素 ID，批量挂载/注册
